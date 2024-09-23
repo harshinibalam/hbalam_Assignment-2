@@ -1,0 +1,323 @@
+---
+title: "Assignment 2- LP Model"
+author: "Harshini Balam"
+date: "2024-09-22"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+### Question:
+
+The Weigelt Corporation has three branch plants with excess production capacity. Fortunately, the corporation has a new product ready to begin production, and all three plants have this capability, so some of
+the excess capacity can be used in this way. This product can be made in three sizes–large, medium, and
+small–that yield a net unit profit of $420, $360, and $300, respectively. Plants 1, 2, and 3 have the excess
+capacity to produce 750, 900, and 450 units per day of this product, respectively, regardless of the size or
+combination of sizes involved. The amount of available in-process storage space also imposes a limitation on
+the production rates of the new product. Plants 1, 2, and 3 have 13,000, 12,000, and 5,000 square feet, respectively, of in-process storage space available for a day’s production of this product. Each unit of the large,
+medium, and small sizes produced per day requires 20, 15, and 12 square feet, respectively. Sales forecasts
+indicate that if available, 900, 1,200, and 750 units of the large, medium, and small sizes, respectively, would
+be sold per day. At each plant, some employees will need to be laid off unless most of the plant’s excess
+production capacity can be used to produce the new product. To avoid layoffs if possible, management has
+decided that the plants should use the same percentage of their excess capacity to produce the new product.
+Management wishes to know how much of each of the sizes should be produced by each of the plants to
+maximize profit
+
+### Solution: 
+
+Steps to solving the linear programming problem using the `lpSolve` package:
+
+### Reframing with Matrix:
+
+We have three plants producing three product sizes: Large, Medium, and Small. The production of these products is represented as:
+
+- **Plant 1**: produces \( x_l \), \( x_m \), \( x_s \)
+- **Plant 2**: produces \( y_l \), \( y_m \), \( y_s \)
+- **Plant 3**: produces \( z_l \), \( z_m \), \( z_s \)
+
+The matrix we created earlier in Assignment 1 represents these variables:
+
+**Step 1**:
+
+```{r}
+# Creating a matrix to represent the production at each plant
+data = matrix(c("x_l", "x_m", "x_s", "y_l", "y_m", "y_s", "z_l", "z_m", "z_s"), ncol=3, byrow=TRUE)
+
+# Specifying column names (for Large, Medium, Small)
+colnames(data) = c('Large', 'Medium', 'Small')
+
+# Specifying row names (for Plant 1, Plant 2, Plant 3)
+rownames(data) = c("Plant 1", "Plant 2", "Plant 3")
+
+# Assigning to table and display
+final = as.table(data)
+final
+
+```
+
+Assume the following scenario:
+
+**Products produced by the plants:**
+- **Plant 1** produces large (\(x_l\)), medium (\(x_m\)), and small (\(x_s\)) products.
+- **Plant 2** produces large (\(y_l\)), medium (\(y_m\)), and small (\(y_s\)) products.
+- **Plant 3** produces large (\(z_l\)), medium (\(z_m\)), and small (\(z_s\)) products.
+
+Let "p" represent the production capacity percentage. The products mentioned above are categorized as Large, Medium, and Small, respectively.
+
+### (a) Decision Variables:
+The decision variables in this problem are the quantities of products:
+- From Plant 1: \(x_l\), \(x_m\), \(x_s\)
+- From Plant 2: \(y_l\), \(y_m\), \(y_s\)
+- From Plant 3: \(z_l\), \(z_m\), \(z_s\)
+
+### (b) The Linear Programming Model:
+We aim to **maximize** the total production value \(Z\), defined by:
+\[
+Z = (420x_l + 360x_m + 300x_s) + (420y_l + 360y_m + 300y_s) + (420z_l + 360z_m + 300z_s)
+\]
+
+### Subject to the following constraints:
+
+1. **Storage Space Constraints:**
+   - **Plant 1**: \(20x_l + 15x_m + 12x_s \leq 13000\)
+   - **Plant 2**: \(20y_l + 15y_m + 12y_s \leq 12000\)
+   - **Plant 3**: \(20z_l + 15z_m + 12z_s \leq 5000\)
+
+2. **Capacity Constraints:**
+   - **Plant 1**: \(x_l + x_m + x_s \leq 750\)
+   - **Plant 2**: \(y_l + y_m + y_s \leq 900\)
+   - **Plant 3**: \(z_l + z_m + z_s \leq 450\)
+
+3. **Demand Constraints:**
+   - **Large products**: \(x_l + y_l + z_l \leq 900\)
+   - **Medium products**: \(x_m + y_m + z_m \leq 1200\)
+   - **Small products**: \(x_s + y_s + z_s \leq 750\)
+
+4. **Same Capacity Percentage Constraint:**
+   Management requires all plants to operate at the same percentage of their capacity. This constraint is expressed as:
+   \[
+   \frac{x_l + x_m + x_s}{750} = \frac{y_l + y_m + y_s}{900} = \frac{z_l + z_m + z_s}{450}
+   \]
+
+5. **Non-Negativity Constraints:**
+   The quantities of products must be non-negative:
+   \[
+   x_l \geq 0, \ x_m \geq 0, \ x_s \geq 0, \ y_l \geq 0, \ y_m \geq 0, \ y_s \geq 0, \ z_l \geq 0, \ z_m \geq 0, \ z_s \geq 0
+   \]
+
+This linear programming problem aims to maximize the total production profit while satisfying storage, capacity, demand, and uniform capacity percentage constraints across all plants.
+
+###### Installing and Loading the ‘lpSolve’ Package
+
+```{r}
+options(repos = c(CRAN = "https://cloud.r-project.org/"))
+
+# Installing the lpSolve package
+install.packages("lpSolve")
+
+# Loading the lpSolve package
+library(lpSolve)
+
+```
+
+**Step 2**:
+
+Preparing a vector for the **objective function**. This vector contains the coefficients of the decision variables that you want to maximize in your linear programming model. Each coefficient represents the profit contribution of each variable (i.e., the revenue from each product produced at each plant).
+
+Here’s the explanation and the code for defining the objective function:
+
+### Explanation:
+
+Your objective function is:
+
+\[
+Z = (420 \cdot x_l + 360 \cdot x_m + 300 \cdot x_s) + (420 \cdot y_l + 360 \cdot y_m + 300 \cdot y_s) + (420 \cdot z_l + 360 \cdot z_m + 300 \cdot z_s)
+\]
+
+Where:
+- \( x_l, x_m, x_s \) are the production quantities of large, medium, and small products from Plant 1.
+- \( y_l, y_m, y_s \) are the production quantities of large, medium, and small products from Plant 2.
+- \( z_l, z_m, z_s \) are the production quantities of large, medium, and small products from Plant 3.
+
+The objective is to **maximize Z**, which is the total profit from all the products.
+
+```{r}
+f.obj = c(420,360,300,420,360,300,420,360,300)
+```
+
+
+### Explanation of the Vector:
+- **420, 360, 300**: These are the profits for large, medium, and small products produced at **Plant 1**.
+- **420, 360, 300**: These are the profits for large, medium, and small products produced at **Plant 2**.
+- **420, 360, 300**: These are the profits for large, medium, and small products produced at **Plant 3**.
+
+Now, this `f.obj` vector will be used in the `lp` function as part of the linear programming model.
+
+**Step 3**:
+
+Preparing a matrix that captures all the constraints in the linear programming problem. This matrix is designed to represent the left-hand side (LHS) coefficients for each constraint.
+
+Here's the breakdown of the matrix:
+
+### Explanation of the Constraints:
+
+1. **Rows 1-3**: These represent the **storage space constraints** for each plant:
+   - Row 1: Storage for Plant 1.
+   - Row 2: Storage for Plant 2.
+   - Row 3: Storage for Plant 3.
+   
+   Each row has the coefficients corresponding to large, medium, and small products for that plant. For example, in Plant 1 (Row 1), the coefficients are 20, 15, and 12 for large, medium, and small products.
+
+2. **Rows 4-6**: These represent the **capacity constraints** for each plant:
+   - Row 4: Capacity for Plant 1.
+   - Row 5: Capacity for Plant 2.
+   - Row 6: Capacity for Plant 3.
+   
+   These rows ensure that the sum of the large, medium, and small products produced by each plant does not exceed its capacity.
+
+3. **Rows 7-9**: These represent the **demand constraints** for the three product sizes (large, medium, small):
+   - Row 7: Large products demand.
+   - Row 8: Medium products demand.
+   - Row 9: Small products demand.
+   
+   These rows ensure that the total production across all plants for each product size (large, medium, small) does not exceed the overall demand.
+
+4. **Rows 10-12**: These represent the **same capacity percentage constraints**, ensuring that all plants operate at the same percentage of their respective capacities:
+   - Row 10: For large products.
+   - Row 11: For medium products.
+   - Row 12: For small products.
+   
+   These equations ensure that the plants use the same percentage of their available capacity.
+
+```{r}
+# Preparing a matrix for the constraint functions
+f.con = matrix(c(
+  20, 15, 12,  0,  0,  0,  0,  0,  0,  # Plant 1 storage
+   0,  0,  0, 20, 15, 12,  0,  0,  0,  # Plant 2 storage
+   0,  0,  0,  0,  0,  0, 20, 15, 12,  # Plant 3 storage
+   1,  1,  1,  0,  0,  0,  0,  0,  0,  # Plant 1 capacity
+   0,  0,  0,  1,  1,  1,  0,  0,  0,  # Plant 2 capacity
+   0,  0,  0,  0,  0,  0,  1,  1,  1,  # Plant 3 capacity
+   1,  0,  0,  1,  0,  0,  1,  0,  0,  # Large demand
+   0,  1,  0,  0,  1,  0,  0,  1,  0,  # Medium demand
+   0,  0,  1,  0,  0,  1,  0,  0,  1,  # Small demand
+  900, 900, 900, -750, -750, -750,  0,  0,  0,  # Same percentage constraint for large
+   0,  0,  0,  450,  450,  450, -900, -900, -900,  # Same percentage constraint for medium
+  450, 450, 450,   0,    0,    0, -750, -750, -750  # Same percentage constraint for small
+), nrow = 12, ncol = 9, byrow = TRUE)
+
+# Displaying the matrix
+f.con
+```
+### Explanation of the Matrix Structure:
+Each row represents one constraint, and each column corresponds to one of the decision variables (\(x_l, x_m, x_s, y_l, y_m, y_s, z_l, z_m, z_s\)). The matrix defines how these variables relate to the respective constraints.
+
+- For instance, in row 1 (`20, 15, 12, 0, 0, 0, 0, 0, 0`), the values `20, 15, 12` represent the coefficients of \(x_l, x_m, x_s\) in the **Plant 1 storage constraint**.
+- Similarly, row 4 (`1, 1, 1, 0, 0, 0, 0, 0, 0`) ensures that the sum of \(x_l, x_m, x_s\) in Plant 1 does not exceed its capacity.
+
+**Step 4**:
+
+Defining a vector that specifies the direction of each constraint (i.e., whether it's a "less than or equal to" or some other type of constraint).
+
+In linear programming, each constraint typically takes the form of:
+\[ \text{Left-hand side} \ (\leq, =, \geq) \ \text{Right-hand side} \]
+Here, you're creating a vector `f.dir` that specifies the relational operator for each row of your constraint matrix. In your case, the constraints are all "less than or equal to" (≤).
+
+### Code for Defining the Signs of Each Constraint Row:
+
+```{r}
+f.dir <- c("<=",
+           "<=",
+           "<=",
+           "<=",
+           "<=",
+           "<=",
+           "<=",
+           "<=",
+           "<=",
+           "<=",
+           "<=",
+           "<=")
+```
+
+
+### Explanation of the Code:
+
+- `f.dir` is a vector that contains 12 entries.
+- Each entry corresponds to a row in your constraint matrix (`f.con`).
+- Since all the constraints are **less than or equal to** (≤), you use `"<="` for each entry.
+
+### Correspondence to the Constraints:
+
+1. The first three constraints correspond to the **storage space** limits for each plant.
+2. The next three constraints are for the **capacity** limits for each plant.
+3. The following three rows are for the **demand** constraints for large, medium, and small products.
+4. The final three constraints are for the **same percentage capacity** constraints.
+
+So, each row in the constraint matrix will use `<=` to ensure that the left-hand side does not exceed the right-hand side.
+
+**Step 5**:
+
+Creating a vector:
+Defining the right-hand side (RHS) constraints and solved the linear programming problem, aiming to maximize the objective function. Here's a detailed breakdown:
+
+1. **Define the Right-Hand Side (RHS) Values**:
+```{r}
+ f.rhs <- c(13000, 12000, 5000, 750, 900, 450, 900, 1200, 750, 0, 0, 0)
+```
+
+   - This vector specifies the limits for your constraints:
+     - **Storage Space Constraints**: 
+       - Plant 1: 13,000
+       - Plant 2: 12,000
+       - Plant 3: 5,000
+     - **Capacity Constraints**: 
+       - Plant 1: 750
+       - Plant 2: 900
+       - Plant 3: 450
+     - **Demand Constraints**: 
+       - Large: 900
+       - Medium: 1200
+       - Small: 750
+     - **Same Capacity Percentage Constraints**: 
+       - Values set to 0 (for alignment of capacity across plants).
+
+2. **Solving the Linear Programming Problem**:
+```{r}
+lp("max", f.obj, f.con, f.dir, f.rhs)
+```
+
+   - Here, `lp()` is called to find the optimal solution for the objective function.
+   - The function reports success with an optimal objective function value of **696,000**, indicating the maximum profit achievable under the constraints.
+
+3. **Retrieving the Optimal Production Quantities**:
+
+```{r}
+lp('max', f.obj, f.con, f.dir, f.rhs)$solution
+```
+
+   - This command retrieves the optimal values for the decision variables (quantities of products to produce at each plant).
+   - The output shows:
+
+
+### Interpretation of the Solution:
+
+- **Plant 1**:
+  - Large products: **516.67** units
+  - Medium products: **177.78** units
+  - Small products: **0** units
+
+- **Plant 2**:
+  - Large products: **0** units
+  - Medium products: **666.67** units
+  - Small products: **166.67** units
+
+- **Plant 3**:
+  - Large products: **0** units
+  - Medium products: **0** units
+  - Small products: **416.67** units
+
+### Conclusion:
+The solution indicates how much of each product should be produced at each plant to maximize profit while adhering to the specified constraints. The maximum profit achievable with this production strategy is **696,000**. This structured approach ensures optimal resource allocation in production.
+
+
